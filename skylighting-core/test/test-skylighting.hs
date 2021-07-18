@@ -8,7 +8,9 @@ import Data.Aeson (decode, encode)
 import Data.Algorithm.Diff
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map as Map
-import Data.Monoid ((<>))
+#if !MIN_VERSION_base(4,11,0)
+import Data.Semigroup ((<>), Semigroup)
+#endif
 import Data.Text (Text)
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
@@ -101,10 +103,10 @@ main = do
                 testCase ("regex " <>
                            (Text.unpack $ TE.decodeUtf8 regex) <> " in "
                            <> sFilename syn)
-             $ assertBool "regex does not compile"
-               $ case compileRegex True regex of
-                         Right _ -> True
-                         Left _  -> False) $ getRegexesFromSyntax syn))
+             $ case compileRegex True regex of
+                 Right _ -> assertBool "regex does not compile" True
+                 Left e -> assertFailure ("regex does not compile: " <> show e))
+                         $ getRegexesFromSyntax syn))
         syntaxes
     , testGroup "Regex module" $ map regexTest regexTests
     , testGroup "Regression tests" $
@@ -114,6 +116,8 @@ main = do
                              (lookupSyntax "html" sMap)
           cpp  = maybe (error "could not find CPP syntax") id
                              (lookupSyntax "cpp" sMap)
+          bash  = maybe (error "could not find bash syntax") id
+                             (lookupSyntax "bash" sMap)
           c    = maybe (error "could not find C syntax") id
                              (lookupSyntax "c" sMap) in
       [ testCase "perl NUL case" $ Right
@@ -151,11 +155,11 @@ main = do
       , testCase "cpp floats" $ Right
            [ [ (FloatTok,"0.1") , (BuiltInTok,"f")]
            , [ (FloatTok,"1.0") , (BuiltInTok,"f")]
-           , [ (NormalTok,"-") , (FloatTok,"0.1") , (BuiltInTok,"f")]
-           , [ (NormalTok,"-") , (FloatTok,"1.0") , (BuiltInTok,"F")]
-           , [ (NormalTok,"-") , (FloatTok,"1.0") , (BuiltInTok,"L")]
+           , [ (OperatorTok,"-") , (FloatTok,"0.1") , (BuiltInTok,"f")]
+           , [ (OperatorTok,"-") , (FloatTok,"1.0") , (BuiltInTok,"F")]
+           , [ (OperatorTok,"-") , (FloatTok,"1.0") , (BuiltInTok,"L")]
            , [ (FloatTok,"1e3")]
-           , [ (NormalTok,"-") , (FloatTok,"15e+3")]
+           , [ (OperatorTok,"-") , (FloatTok,"15e+3")]
            , [ (FloatTok,"0.") , (BuiltInTok,"f")]
            , [ (FloatTok,"1.") , (BuiltInTok,"F")]
            , [ (FloatTok,"1.E3")]
@@ -176,6 +180,19 @@ main = do
       , testCase "Chinese characters in HTML (#110)" $ Right
           [ [ ( NormalTok , "\35797\65306" ) , ( KeywordTok , "<a>" ) ]
           ] @=? tokenize defConfig html "试：<a>"
+
+      , testCase "Bash closing brace (#119)" $ Right
+          [ [ ( FunctionTok , "f()" )
+            , ( NormalTok , " " )
+            , ( KeywordTok , "{" ) ]
+          , [ ( NormalTok , "    " )
+            , ( BuiltInTok , "echo" )
+            , ( NormalTok , " " )
+            , ( OperatorTok , ">" )
+            , ( NormalTok , " f" ) ]
+          , [ ( KeywordTok , "}" ) ] ]
+             @=? tokenize defConfig bash
+                     "f() {\n    echo > f\n}\n"
 
       ]
     ]
@@ -294,6 +311,19 @@ regexTests =
   , ("\\w+?e", "aaaeeee", Just ("aaae", []))
   , ("a+b??", "aaab", Just ("aaa", []))
   , ("\\([a-z]+(?R)*\\)", "(aa(b(c)(d)))", Just ("(aa(b(c)(d)))", []))
+  , ("a{}", "aaa", Nothing)
+  , ("a{}", "a{}", Just ("a{}", []))
+  , ("a{3", "a{3", Just ("a{3", []))
+  , ("(?|(abc)|(def))", "abc", Just ("abc", [(1,"abc")]))
+  , ("(?|(abc)|(def))", "def", Just ("def", [(1,"def")]))
+  , ("(?:(abc)|(def))", "def", Just ("def", [(2,"def")]))
+  , ("d(?=(bc)|(ef))", "def", Just ("d", [(2,"ef")]))
+  , ("([bcd])([efg])(?2)(?1)", "befd", Just ("befd", [(1,"b"),(2,"e")]))
+  , ("([abc](?1)*)", "abcd", Just ("abc", [(1,"abc")]))
+  , ("(x(?1)*)", "xxxxy", Just ("xxxx", [(1,"xxxx")]))
+  , ("a|\\((?0)\\)", "(((a)))", Just ("(((a)))", []))
+  , ("([abc](x(?1))*)", "axbxcc", Just ("axbxc", [(1,"axbxc"),(2,"xc")]))
+    -- note: pcre gives insetad (2, "xbxc") -- I don't understand why
   ]
 
 

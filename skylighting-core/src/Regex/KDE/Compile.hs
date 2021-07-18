@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Regex.KDE.Compile
@@ -55,14 +56,25 @@ pRegexPart caseSensitive =
      lift . pSuffix
 
 pParenthesized :: Bool -> RParser Regex
-pParenthesized caseSensitive = (do
+pParenthesized caseSensitive = do
   _ <- lift (satisfy (== 40))
-  modifier <- lift (satisfy (== 63) *> pGroupModifiers)
-                <|> (MatchCapture <$> (modify (+ 1) *> get))
-  contents <- pRegex caseSensitive
+  -- pcrepattern says: A group that starts with (?| resets the capturing
+  -- parentheses numbers in each alternative.
+  resetCaptureNumbers <- option False (True <$ lift (string "?|"))
+  modifier <- if resetCaptureNumbers
+                 then return id
+                 else lift (satisfy (== 63) *> pGroupModifiers)
+                    <|> (MatchCapture <$> (modify (+ 1) *> get))
+  currentCaptureNumber <- get
+  contents <- option MatchNull $
+    foldr MatchAlt
+      <$> (pAltPart caseSensitive)
+      <*> (many $ lift (char '|') *>
+            (((if resetCaptureNumbers
+                  then put currentCaptureNumber
+                  else return ()) >> pAltPart caseSensitive) <|> pure mempty))
   _ <- lift (satisfy (== 41))
-  return $ modifier contents)
-  <|> Recurse <$ (lift (string "(?R)" <|> string "(?0)"))
+  return $ modifier contents
 
 pGroupModifiers :: Parser (Regex -> Regex)
 pGroupModifiers =
@@ -70,6 +82,12 @@ pGroupModifiers =
    <|>
      do dir <- option Forward $ Backward <$ char '<'
         (AssertPositive dir <$ char '=') <|> (AssertNegative dir <$ char '!')
+   <|>
+     do n <- satisfy (\d -> d >= 48 && d <= 57)
+        return (\_ -> Subroutine (fromIntegral n - 48))
+   <|>
+     do _ <- satisfy (== 82) -- R
+        return  (\_ -> Subroutine 0)
 
 pSuffix :: Regex -> Parser Regex
 pSuffix re = option re $ do
@@ -84,12 +102,11 @@ pSuffix re = option re $ do
       maxn <- option Nothing $ char ',' *>
                        (readMay . U.toString <$> A.takeWhile isDig)
       _ <- char '}'
-      return $!
-        case (minn, maxn) of
-          (Nothing, Nothing) -> atleast 0 re
-          (Just n, Nothing)  -> atleast n re
-          (Nothing, Just n)  -> atmost n re
-          (Just m, Just n)   -> between m n re
+      case (minn, maxn) of
+          (Nothing, Nothing) -> mzero
+          (Just n, Nothing)  -> return $! atleast n re
+          (Nothing, Just n)  -> return $! atmost n re
+          (Just m, Just n)   -> return $! between m n re
     _   -> fail "pSuffix encountered impossible byte") >>= pQuantifierModifier
  where
    atmost 0 _ = MatchNull
@@ -176,6 +193,16 @@ pEscaped c =
       case readMay ("'\\o" ++ U.toString ds ++ "'") of
         Just x  -> return x
         Nothing -> fail "invalid octal character escape"
+    _ | c >= '1' && c <= '7' -> do
+      -- \123 matches octal 123, \1 matches octal 1
+      let octalDigitScanner s w
+            | s < 3, w >= 48 && w <= 55
+                        = Just (s + 1) -- digits 0-7
+            | otherwise = Nothing
+      ds <- A.scan (1 :: Int) octalDigitScanner
+      case readMay ("'\\o" ++ [c] ++ U.toString ds ++ "'") of
+        Just x  -> return x
+        Nothing -> fail "invalid octal character escape"
     'z' -> do -- \zhhhh matches unicode hex char hhhh
       ds <- A.take 4
       case readMay ("'\\x" ++ U.toString ds ++ "'") of
@@ -242,7 +269,7 @@ isSpecial 92 = True -- '\\'
 isSpecial 63 = True -- '?'
 isSpecial 42 = True -- '*'
 isSpecial 43 = True -- '+'
-isSpecial 123 = True -- '{'
+-- isSpecial 123 = True -- '{'  -- this is okay except in suffixes
 isSpecial 91 = True -- '['
 isSpecial 93 = True -- ']'
 isSpecial 37 = True -- '%'

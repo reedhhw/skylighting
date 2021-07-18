@@ -1,5 +1,153 @@
 # Revision history for skylighting and skylighting-core
 
+## 0.11
+
+  * Skylighting.Regex: Support regex subroutines (#118).  For example,
+    `(?1)` is replaced by the regex in the first capturing group.  So far
+    we only support this simple, absolute form, not the relative
+    form `(?-1)` supported by some engines (but not used, I think, in
+    KDE's syntax highlighters).  This change involves an API change:
+    Regex in Skylighting.Regex has a new Subroutine constructor,
+    and the Recurse constructor has been removed.  Instead of Recurse we use
+    Subroutine 0, which unifies the code.
+
+  * Skylighting.Regex: handle e.g. `[\1]` and `[\123]` (without
+    initial 0) as octal escapes (#118).  These occur in the zsh.xml
+    syntax definition.
+
+  * Pull xml definitions for bash, cmake, python, zsh from upstream.
+
+  * README: Add a note about pulling syntax definitions from upstream (#138).
+    Update build instructions for recent cabal versions (#131).
+
+## 0.10.5.2
+
+  * Added swift grammar definition (Igor Ranieri).
+
+  * Simplify README.md instructions for two-step build.
+
+  * Fix link to KDE documentation.
+
+## 0.10.5.1
+
+  * Regex: Allow lookaheads to capture groups.  Previously
+    captures in lookaheads, like `(?=(a*))`, were ignored.  This
+    led to errors highlighting xml and probably other formats (#121).
+
+  * Throw an exception if a capture group isn't defined (with 'dynamic')
+    rather than simply having getCapture fail so that the rule fails.
+    This will make it easier to debug issues like #121.
+
+## 0.10.5
+
+  * Fix regression from 0.10.3 with Haskell highlighting of Char (#120).
+
+  * Update xml syntax definitions from upstream.  Updated
+    syntaxes: abc apache asp bash bibtex boo c changelog clojure
+    cmake commonlisp cs curry d diff djangotemplate doxygen
+    elixir elm email erlang fortran-fixed fortran-free fsharp
+    hamlet haskell haxe html idris ini javascript-react
+    javascript json julia kotlin latex lex lilypond
+    literate-curry literate-haskell makefile markdown
+    mathematica maxima mediawiki metafont modula-2 mustache nasm
+    nim noweb ocaml octave opencl perl powershell prolog pure
+    python r roff ruby rust sed spdx-comments sql-mysql
+    sql-postgresql tcl tcsh toml typescript verilog xml xslt xul
+    yacc yaml.  Not updated: rhtml (causes an error on our test
+    suite), zsh (has a regex we can't parse).
+
+## 0.10.4.1
+
+  * Fixed logic for checking line-end-context (#119).
+
+  * Use NonEmpty for the context stack.
+
+  * Remove unneeded build-depends.
+
+## 0.10.4
+
+  * Move from hxt to xml-conduit for XML parsing.
+
+    This gives about a 4X speedup in parsing syntax definitions.
+    It also reduces the pandoc build dependency footprint, as we
+    depend on xml-conduit anyway and now no longer need to compile
+    HXT and its dependencies.
+
+    There are improvements in accuracy as well: the change to
+    xml-conduit improved parsing for one of the prolog rules;
+    a matcher that should have been for tab characters had been set for a
+    space instead.
+
+  * Removed some unnecessary build-depends in skylighting-extract.
+
+## 0.10.3
+
+  * Add support for raku (#114).
+
+  * Reimplement PR #40 and add haskell.xml.patch (#116).
+
+  * Update syntax definitions: actionscript ada asp awk bash
+    bibtex boo c cmake cpp cs d elm email fasm fsharp glsl
+    gnuassembler go haskell haskell idris isocpp
+    javascript julia latex lilypond makefile mediawiki metafont
+    mustache objectivec objectivecpp octave opencl perl php
+    php powershell prolog purebasic raku rest ruby sed
+    spdx-comments sql-mysql sql-postgresql sql typescript
+    verilog vhdl.
+
+  * Fix php.xml.patch so it applies again.
+
+## 0.10.2
+
+  * Update syntax definitions for abc, actionscript, asn1, ats,
+    bash, boo, coffee, comments, cpp, cs, css, curry, d,
+    djangotemplate, dockerfile, doxygen, dtd, elixir, graphql,
+    groovy, hamlet, haskell, haxe, idris, ini, j, java,
+    javadoc, javascript-react, javascript, jsp, kotlin, lex,
+    lilypond, literate-curry, literate-haskell, m4, makefile,
+    mandoc, markdown, mediawiki, mips, modula-2, modula-3,
+    monobasic, mustache, nim, noweb, objectivec, objectivecpp,
+    ocaml, opencl, pascal, perl, php, pike, postscript,
+    prolog, protobuf, pure, purebasic, python, qml, relaxng,
+    relaxngcompact, rest, rhtml, roff, ruby, scala, sci, sed,
+    sgml, sml, spdx-comments, stata, tcsh, texinfo, verilog,
+    xml, xorg, xul.
+
+  * Re-insert CSS line needed to make line numbers appear in
+    HTML.  See jgm/pandoc#6625.
+
+## 0.10.1
+
+  * Regex: handle `(?|)` modifier.  This is used in bash.xml now.
+    It resets the numbers of capturing groups in alternatives.
+
+  * Improve regex handling of `{` and `}` not in quantifiers:
+    - `{}` is literal (not a quantifier).
+    - loose unescaped `{` and `}` that are not part of a quantifier are
+      literal matchers.
+
+  * Update xml syntax definitions from upstream.
+    For: abc, actionscript, ada, agda, alert, apache, asn1, asp,
+    ats, awk, bash, boo, c, clojure, cmake, coffee, coldfusion,
+    commonlisp, cs, css, curry, d, djangotemplate, dockerfile,
+    dot, doxygen, dtd, eiffel, elixir, elm, erlang, fasm,
+    fortran-fixed, fortran-free, fsharp, glsl, gnuassembler, go,
+    graphql, groovy, hamlet, haskell, haxe, html, idris, ini,
+    isocpp, j, java, javadoc, javascript, jsp, julia, kotlin,
+    latex, lex, lilypond, literate-curry, literate-haskell,
+    llvm, lua, m4, makefile, markdown, mathematica, matlab,
+    maxima, mediawiki, metafont, mips, modula-2, modula-3,
+    monobasic, mustache, nasm, nim, noweb, objectivec,
+    objectivecpp, ocaml, octave, opencl, pascal, perl, php,
+    pike, postscript, povray, powershell, prolog, protobuf,
+    pure, purebasic, python, r, relaxng, relaxngcompact, rest,
+    rhtml, roff, ruby, rust, scala, scheme, sci, sed, sgml, sml,
+    sql-mysql, sql-postgresql, sql, stata, tcl, tcsh, texinfo,
+    toml, verilog, vhdl, xml, xorg, xslt, xul, yacc, yaml, zsh.
+    Also added spdx-comments.xml and comments.xml, which are
+    needed for these.  Closes #111 (latex bug in matrix).
+
+
 ## 0.10.0.3
 
   * Add groovy syntax.

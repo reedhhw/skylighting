@@ -31,11 +31,12 @@ import Data.Text.Encoding (decodeUtf8', encodeUtf8)
 import Debug.Trace
 import Skylighting.Regex
 import Skylighting.Types
+import Data.List.NonEmpty (NonEmpty((:|)), (<|), toList)
 #if !MIN_VERSION_base(4,11,0)
 import Data.Semigroup
 #endif
 
-newtype ContextStack = ContextStack{ unContextStack :: [Context] }
+newtype ContextStack = ContextStack{ unContextStack :: NonEmpty Context }
   deriving (Show)
 
 data TokenizerState = TokenizerState{
@@ -131,19 +132,27 @@ instance MonadError String TokenizerM where
 -- | Tokenize some text using 'Syntax'.
 tokenize :: TokenizerConfig -> Syntax -> Text -> Either String [SourceLine]
 tokenize config syntax inp =
-  case runTokenizerM action config initState of
+  eitherStack >>= \stack ->
+    case runTokenizerM action config (startingState stack) of
        (_, Success ls) -> Right ls
        (_, Error e)    -> Left e
        (_, Failure)    -> Left "Could not tokenize code"
   where
     action = mapM tokenizeLine (zip (BS.lines (encodeUtf8 inp)) [1..])
-    initState = startingState{ endline = Text.null inp
-                             , contextStack =
-                                   case lookupContext
-                                         (sStartingContext syntax) syntax of
-                                         Just c  -> ContextStack [c]
-                                         Nothing -> ContextStack [] }
-
+    eitherStack = case lookupContext (sStartingContext syntax) syntax of
+                    Just c  -> Right $ ContextStack (c :| [])
+                    Nothing -> Left "No starting context specified"
+    startingState stack =
+      TokenizerState{ input = BS.empty
+                    , endline = Text.null inp
+                    , prevChar = '\n'
+                    , contextStack = stack
+                    , captures = mempty
+                    , column = 0
+                    , lineContinuation = False
+                    , firstNonspaceColumn = Nothing
+                    , compiledRegexes = Map.empty
+                    }
 
 info :: String -> TokenizerM ()
 info s = do
@@ -155,35 +164,28 @@ infoContextStack = do
   tr <- asks traceOutput
   when tr $ do
     ContextStack stack <- gets contextStack
-    info $ "CONTEXT STACK " ++ show (map cName stack)
+    info $ "CONTEXT STACK " ++ show (map cName $ toList stack)
 
 popContextStack :: TokenizerM ()
 popContextStack = do
   ContextStack cs <- gets contextStack
   case cs of
-       []     -> throwError "Empty context stack (the impossible happened)"
-       -- programming error
-       (_:[]) -> return ()
-       (_:rest) -> do
-         modify (\st -> st{ contextStack = ContextStack rest })
-         currentContext >>= checkLineEnd
+       (_ :| []) -> info "WARNING: Tried to pop only element on context stack!"
+       (_ :| (x:xs)) -> do
+         modify (\st -> st{ contextStack = ContextStack (x :| xs) })
          infoContextStack
 
 pushContextStack :: Context -> TokenizerM ()
 pushContextStack cont = do
   modify (\st -> st{ contextStack =
-                      ContextStack (cont : unContextStack (contextStack st)) } )
-  -- not sure why we need this in pop but not here, but if we
-  -- put it here we can get loops...
-  -- checkLineEnd cont
+                      ContextStack
+                       ((cont <|) . unContextStack $ contextStack st) } )
   infoContextStack
 
 currentContext :: TokenizerM Context
 currentContext = do
-  ContextStack cs <- gets contextStack
-  case cs of
-       []    -> throwError "Empty context stack" -- programming error
-       (c:_) -> return c
+  ContextStack (c :| _) <- gets contextStack
+  return c
 
 doContextSwitch :: ContextSwitch -> TokenizerM ()
 doContextSwitch Pop = popContextStack
@@ -194,9 +196,7 @@ doContextSwitch (Push (syn,c)) = do
        Nothing  -> throwError $ "Unknown syntax or context: " ++ show (syn, c)
 
 doContextSwitches :: [ContextSwitch] -> TokenizerM ()
-doContextSwitches [] = return ()
-doContextSwitches xs = do
-  mapM_ doContextSwitch xs
+doContextSwitches = mapM_ doContextSwitch
 
 lookupContext :: Text -> Syntax -> Maybe Context
 lookupContext name syntax | Text.null name =
@@ -204,19 +204,6 @@ lookupContext name syntax | Text.null name =
      then Nothing
      else lookupContext (sStartingContext syntax) syntax
 lookupContext name syntax = Map.lookup name $ sContexts syntax
-
-startingState :: TokenizerState
-startingState =
-  TokenizerState{ input = BS.empty
-                , endline = True
-                , prevChar = '\n'
-                , contextStack = ContextStack []
-                , captures = mempty
-                , column = 0
-                , lineContinuation = False
-                , firstNonspaceColumn = Nothing
-                , compiledRegexes = Map.empty
-                }
 
 tokenizeLine :: (ByteString, Int) -> TokenizerM [Token]
 tokenizeLine (ln, linenum) = do
@@ -432,15 +419,15 @@ includeRules mbattr (syn, con) inp = do
 
 checkLineEnd :: Context -> TokenizerM ()
 checkLineEnd c = do
-  if null (cLineEndContext c)
-     then return ()
-     else do
-       eol <- gets endline
-       info $ "checkLineEnd for " ++ show (cName c) ++ " eol = " ++ show eol ++ " cLineEndContext = " ++ show (cLineEndContext c)
-       when eol $ do
-         lineCont' <- gets lineContinuation
-         unless lineCont' $
-           doContextSwitches (cLineEndContext c)
+  unless (null (cLineEndContext c)) $ do
+    eol <- gets endline
+    info $ "checkLineEnd for " ++ show (cName c) ++ " eol = " ++ show eol ++ " cLineEndContext = " ++ show (cLineEndContext c)
+    when eol $ do
+      lineCont' <- gets lineContinuation
+      unless lineCont' $ do
+        doContextSwitches (cLineEndContext c)
+        c' <- currentContext
+        unless (c == c') $ checkLineEnd c'
 
 detectChar :: Bool -> Char -> ByteString -> TokenizerM Text
 detectChar dynamic c inp = do
@@ -539,7 +526,7 @@ regExpr dynamic re inp = do
         Just (matchedBytes, capts) -> do
           unless (null capts) $
              modify $ \st -> st{ captures =
-                                  IntMap.map (toSlice matchedBytes) capts }
+                                  IntMap.map (toSlice inp) capts }
           takeChars (UTF8.length matchedBytes)
         _ -> mzero
 
@@ -587,7 +574,7 @@ getCapture :: Int -> TokenizerM Text
 getCapture capnum = do
   capts <- gets captures
   case IntMap.lookup capnum capts of
-     Nothing -> mzero
+     Nothing -> throwError $ "Capture " <> show capnum <> " not defined!"
      Just x  -> decodeBS x
 
 keyword :: KeywordAttr -> WordSet Text -> ByteString -> TokenizerM Text

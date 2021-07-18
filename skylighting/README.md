@@ -69,17 +69,20 @@ package.
 
 Using cabal:
 
-    cd skylighting-core
-    cabal install -fexecutable
+    # First, build skylighting-extract
+    cabal build -fexecutable skylighting-core
+    # This will print the path of the built executable.
+    # Replace $EXE with this path in the following steps
+    # Now, generate the syntax files
     cd ../skylighting
-    skylighting-extract ../skylighting-core/xml/*.xml
+    $EXE ../skylighting-core/xml/*.xml
     cabal install -fexecutable
 
 Using stack:
 
-    stack install --flag skylighting-core:executable skylighting-core
+    stack build --flag skylighting-core:executable skylighting-core
     cd skylighting
-    skylighting-extract ../skylighting-core/xml/*.xml
+    stack exec skylighting-extract -- ../skylighting-core/xml/*.xml
     cd ..
     stack install --flag skylighting:executable
 
@@ -119,6 +122,9 @@ alerting the KDE developers of the availability of a new or
 changed syntax definition; they can then decide whether to
 integrate it.
 
+We normally pull changes in syntax definitions from upstream
+before each release.
+
 License
 -------
 
@@ -135,7 +141,7 @@ References
 ----------
 
 Kate syntax highlighting documentation:
-<https://docs.kde.org/stable5/en/applications/katepart/highlight.html>
+<https://docs.kde.org/stable5/en/kate/katepart/highlight.html>
 
 Kate highlighting definitions: [KDE repository]
 
