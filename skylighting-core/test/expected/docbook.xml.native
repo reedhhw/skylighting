@@ -1,7 +1,9 @@
 [ [ ( FunctionTok , "<?xml" )
-  , ( OtherTok , " version=" )
+  , ( NormalTok , " " )
+  , ( OtherTok , "version=" )
   , ( StringTok , "\"1.0\"" )
-  , ( OtherTok , " encoding=" )
+  , ( NormalTok , " " )
+  , ( OtherTok , "encoding=" )
   , ( StringTok , "\"utf-8\"" )
   , ( FunctionTok , "?>" )
   ]
@@ -38,7 +40,8 @@
   ]
 , [ ( NormalTok , "      <" )
   , ( KeywordTok , "filename" )
-  , ( OtherTok , " class=" )
+  , ( NormalTok , " " )
+  , ( OtherTok , "class=" )
   , ( StringTok , "\"directory\"" )
   , ( NormalTok , ">/usr/bin</" )
   , ( KeywordTok , "filename" )

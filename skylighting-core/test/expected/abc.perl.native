@@ -1,7 +1,9 @@
 [ [ ( FunctionTok , "use" )
   , ( NormalTok , " " )
   , ( FunctionTok , "Test::More" )
-  , ( NormalTok , " tests => " )
+  , ( NormalTok , " " )
+  , ( FunctionTok , "tests" )
+  , ( NormalTok , " => " )
   , ( DecValTok , "8" )
   , ( NormalTok , ";" )
   ]

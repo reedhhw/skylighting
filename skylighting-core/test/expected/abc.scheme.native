@@ -61,12 +61,16 @@
 , [ ( NormalTok , "(" )
   , ( ExtensionTok , "define" )
   , ( FunctionTok , " " )
-  , ( NormalTok , "(can-make-word? w)" )
+  , ( NormalTok , "(" )
+  , ( FunctionTok , "can-make-word? " )
+  , ( NormalTok , "w)" )
   ]
 , [ ( NormalTok , "  (" )
   , ( ExtensionTok , "define" )
   , ( FunctionTok , " " )
-  , ( NormalTok , "(usable-block blocks word-char)" )
+  , ( NormalTok , "(" )
+  , ( FunctionTok , "usable-block " )
+  , ( NormalTok , "blocks word-char)" )
   ]
 , [ ( NormalTok
     , "    (for/first ((b (in-list blocks)) #:when (memf (curry "
@@ -78,7 +82,9 @@
 , [ ( NormalTok , "  (" )
   , ( ExtensionTok , "define" )
   , ( FunctionTok , " " )
-  , ( NormalTok , "(inner word-chars blocks tried-blocks)" )
+  , ( NormalTok , "(" )
+  , ( FunctionTok , "inner " )
+  , ( NormalTok , "word-chars blocks tried-blocks)" )
   ]
 , [ ( NormalTok , "    (" ) , ( KeywordTok , "cond" ) ]
 , [ ( NormalTok , "      " )
@@ -153,7 +159,9 @@
 , [ ( NormalTok , "(" )
   , ( ExtensionTok , "define" )
   , ( FunctionTok , " " )
-  , ( NormalTok , "(report-word w)" )
+  , ( NormalTok , "(" )
+  , ( FunctionTok , "report-word " )
+  , ( NormalTok , "w)" )
   ]
 , [ ( NormalTok , "  (printf " )
   , ( StringTok , "\"Can we make: ~a? ~a~%\"" )

@@ -43,28 +43,33 @@
   , ( DecValTok , "0" )
   ]
 , [ ( NormalTok , "        " )
-  , ( KeywordTok , "foreach" )
+  , ( ControlFlowTok , "foreach" )
   , ( NormalTok , " blk " )
   , ( DataTypeTok , "$blocks" )
   , ( NormalTok , " " )
   , ( KeywordTok , "{" )
   ]
 , [ ( NormalTok , "            " )
-  , ( KeywordTok , "if" )
+  , ( ControlFlowTok , "if" )
   , ( NormalTok , " " )
   , ( KeywordTok , "{" )
   , ( DataTypeTok , "$ch" )
   , ( NormalTok , " in " )
   , ( DataTypeTok , "$blk" )
-  , ( NormalTok , " && (!" )
+  , ( NormalTok , " " )
+  , ( OperatorTok , "&&" )
+  , ( NormalTok , " (" )
+  , ( OperatorTok , "!" )
   , ( KeywordTok , "[llength" )
   , ( NormalTok , " " )
   , ( DataTypeTok , "$rest" )
   , ( KeywordTok , "]" )
   ]
-, [ ( NormalTok , "                    || " )
-  , ( KeywordTok , "[" )
-  , ( NormalTok , "apply " )
+, [ ( NormalTok , "                    " )
+  , ( OperatorTok , "||" )
+  , ( NormalTok , " " )
+  , ( KeywordTok , "[apply" )
+  , ( NormalTok , " " )
   , ( DataTypeTok , "$abc" )
   , ( NormalTok , " " )
   , ( DataTypeTok , "$rest" )
@@ -86,7 +91,7 @@
   , ( KeywordTok , "{" )
   ]
 , [ ( NormalTok , "                " )
-  , ( KeywordTok , "return" )
+  , ( ControlFlowTok , "return" )
   , ( NormalTok , " true" )
   ]
 , [ ( NormalTok , "            " ) , ( KeywordTok , "}" ) ]
@@ -96,15 +101,15 @@
   ]
 , [ ( NormalTok , "        " ) , ( KeywordTok , "}" ) ]
 , [ ( NormalTok , "        " )
-  , ( KeywordTok , "return" )
+  , ( ControlFlowTok , "return" )
   , ( NormalTok , " false" )
   ]
 , [ ( NormalTok , "    " ) , ( KeywordTok , "}}" ) ]
 , [ ( NormalTok , "    " )
-  , ( KeywordTok , "return" )
+  , ( ControlFlowTok , "return" )
   , ( NormalTok , " " )
-  , ( KeywordTok , "[" )
-  , ( NormalTok , "apply " )
+  , ( KeywordTok , "[apply" )
+  , ( NormalTok , " " )
   , ( DataTypeTok , "$abc" )
   , ( NormalTok , " " )
   , ( KeywordTok , "[split" )
@@ -114,8 +119,8 @@
   , ( StringTok , "\"\"" )
   , ( KeywordTok , "]" )
   , ( NormalTok , " " )
-  , ( KeywordTok , "[" )
-  , ( NormalTok , "lmap b " )
+  , ( KeywordTok , "[lmap" )
+  , ( NormalTok , " b " )
   , ( DataTypeTok , "$blocks" )
   , ( NormalTok , " " )
   , ( KeywordTok , "{split" )
@@ -130,7 +135,7 @@
   ]
 , [ ( KeywordTok , "}" ) ]
 , []
-, [ ( KeywordTok , "foreach" )
+, [ ( ControlFlowTok , "foreach" )
   , ( NormalTok , " word " )
   , ( KeywordTok , "{" )
   , ( StringTok , "\"\"" )
