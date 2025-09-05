@@ -1,5 +1,19 @@
 # Revision history for skylighting and skylighting-core
 
+## 0.14.7
+
+  * Update xml syntax definitions: agda, apache, bash, c, clojure,
+    cmake, coffee, commonlisp, cpp, djangotemplate, dot, dtd, fasm,
+    gd-script, glsl, gnuassembler, html, ini, java, json, julia, kotlin,
+    latex, lua, mathematica, mediawiki, metafont, mips, mustache, nasm,
+    objectivecpp, octave, perl, php, povray, powershell, protobuf,
+    python, racket, raku, rhtml, ruby, scheme, sed, sgml,
+    sql-postgresql, stan, systemverilog, tcl, xml, xul.
+
+  * Add gleam.
+
+  * Relax xml-conduit upper bound.
+
 ## 0.14.6
 
   * Export Skylighting.Format.Typst from Skylighting [API change] (#201).
